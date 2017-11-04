@@ -1,4 +1,4 @@
-import { VISITOR_KEYS } from "./index";
+import { VISITOR_KEYS } from "./definitions";
 
 /**
  * A prefix AST traversal implementation meant for simple searching

@@ -1,12 +1,11 @@
-/* eslint max-len: "off" */
-
+// @flow
 import defineType, {
   assertNodeType,
   assertValueType,
   chain,
   assertEach,
   assertOneOf,
-} from "./index";
+} from "./utils";
 import { functionCommon, patternLikeCommon } from "./core";
 
 defineType("AssignmentPattern", {
@@ -466,6 +465,7 @@ defineType("ObjectPattern", {
 
 defineType("SpreadElement", {
   visitor: ["argument"],
+  deprecatedAlias: "SpreadProperty",
   aliases: ["UnaryLike"],
   fields: {
     argument: {

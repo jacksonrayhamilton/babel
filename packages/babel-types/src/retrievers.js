@@ -1,4 +1,10 @@
-import * as t from "./index";
+import {
+  isExportDeclaration,
+  isIdentifier,
+  isDeclaration,
+  isFunctionDeclaration,
+  isFunctionExpression,
+} from "./generated/helpers";
 
 /**
  * Return a list of binding identifiers associated with the input `node`.
@@ -16,9 +22,9 @@ export function getBindingIdentifiers(
     const id = search.shift();
     if (!id) continue;
 
-    const keys = t.getBindingIdentifiers.keys[id.type];
+    const keys = getBindingIdentifiers.keys[id.type];
 
-    if (t.isIdentifier(id)) {
+    if (isIdentifier(id)) {
       if (duplicates) {
         const _ids = (ids[id.name] = ids[id.name] || []);
         _ids.push(id);
@@ -28,20 +34,20 @@ export function getBindingIdentifiers(
       continue;
     }
 
-    if (t.isExportDeclaration(id)) {
-      if (t.isDeclaration(id.declaration)) {
+    if (isExportDeclaration(id)) {
+      if (isDeclaration(id.declaration)) {
         search.push(id.declaration);
       }
       continue;
     }
 
     if (outerOnly) {
-      if (t.isFunctionDeclaration(id)) {
+      if (isFunctionDeclaration(id)) {
         search.push(id.id);
         continue;
       }
 
-      if (t.isFunctionExpression(id)) {
+      if (isFunctionExpression(id)) {
         continue;
       }
     }

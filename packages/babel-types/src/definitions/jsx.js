@@ -1,9 +1,10 @@
+// @flow
 import defineType, {
   assertNodeType,
   assertValueType,
   chain,
   assertEach,
-} from "./index";
+} from "./utils";
 
 defineType("JSXAttribute", {
   visitor: ["name", "value"],

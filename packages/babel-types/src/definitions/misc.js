@@ -1,4 +1,4 @@
-import defineType, { assertNodeType } from "./index";
+import defineType, { assertNodeType } from "./utils";
 
 defineType("Noop", {
   visitor: [],

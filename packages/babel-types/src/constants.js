@@ -1,5 +1,4 @@
-/* eslint max-len: "off" */
-
+// @flow
 export const STATEMENT_OR_BLOCK_KEYS = ["consequent", "body", "alternate"];
 export const FLATTENABLE_KEYS = ["body", "expressions"];
 export const FOR_INIT_KEYS = ["left", "init"];
@@ -63,7 +62,7 @@ export const NOT_LOCAL_BINDING = Symbol.for(
   "should not be considered a local binding",
 );
 
-export const RESERVED_WORDS_ES3_ONLY = new Set([
+export const RESERVED_WORDS_ES3_ONLY: Set<string> = new Set([
   "abstract",
   "boolean",
   "byte",

@@ -1,6 +1,5 @@
-/* eslint max-len: "off" */
-
-import * as t from "../index";
+// @flow
+import isValidIdentifier from "../validators/isValidIdentifier";
 
 import {
   BINARY_OPERATORS,
@@ -16,7 +15,7 @@ import defineType, {
   assertEach,
   chain,
   assertOneOf,
-} from "./index";
+} from "./utils";
 
 defineType("ArrayExpression", {
   fields: {
@@ -373,7 +372,7 @@ defineType("Identifier", {
     ...patternLikeCommon,
     name: {
       validate(node, key, val) {
-        if (!t.isValidIdentifier(val)) {
+        if (!isValidIdentifier(val)) {
           // throw new TypeError(`"${val}" is not a valid identifer name`);
         }
       },
@@ -660,6 +659,7 @@ defineType("ObjectProperty", {
 
 defineType("RestElement", {
   visitor: ["argument", "typeAnnotation"],
+  deprecatedAlias: "RestProperty",
   builder: ["argument"],
   aliases: ["LVal", "PatternLike"],
   fields: {

@@ -1,7 +1,46 @@
+// @flow
 import { getBindingIdentifiers } from "./retrievers";
-import esutils from "esutils";
-import * as t from "./index";
+import {
+  isVariableDeclaration,
+  isFunction,
+  isIdentifier,
+  isCatchClause,
+  isClassDeclaration,
+  isImportDefaultSpecifier,
+  isBlockStatement,
+  isFunctionDeclaration,
+  isScopable,
+  isMemberExpression,
+  isStringLiteral,
+} from "./generated/helpers";
+import { NODE_FIELDS, VISITOR_KEYS } from "./definitions";
 import { BLOCK_SCOPED_SYMBOL, RESERVED_WORDS_ES3_ONLY } from "./constants";
+import isType from "./validators/isType";
+import isValidIdentifier from "./validators/isValidIdentifier";
+
+export function validate(node?: Object, key: string, val: any) {
+  if (!node) return;
+
+  const fields = NODE_FIELDS[node.type];
+  if (!fields) return;
+
+  const field = fields[key];
+  if (!field || !field.validate) return;
+  if (field.optional && val == null) return;
+
+  field.validate(node, key, val);
+}
+
+export function isNode(node?: Object): boolean {
+  return !!(node && VISITOR_KEYS[node.type]);
+}
+
+export function assertNode(node?: Object): void {
+  if (!isNode(node)) {
+    const type = (node && node.type) || JSON.stringify(node);
+    throw new TypeError(`Not a valid node "${type}"`);
+  }
+}
 
 /**
  * Check if the input `node` is a binding identifier.
@@ -160,30 +199,12 @@ export function isReferenced(node: Object, parent: Object): boolean {
 }
 
 /**
- * Check if the input `name` is a valid identifier name
- * and isn't a reserved word.
- */
-
-export function isValidIdentifier(name: string): boolean {
-  if (
-    typeof name !== "string" ||
-    esutils.keyword.isReservedWordES6(name, true)
-  ) {
-    return false;
-  } else if (name === "await") {
-    // invalid in module, valid in script; better be safe (see #4952)
-    return false;
-  } else {
-    return esutils.keyword.isIdentifierNameES6(name);
-  }
-}
-/**
  * Check if the input `name` is a valid identifier name according to the ES3 specification.
  *
  * Additional ES3 reserved words are
  */
 export function isValidES3Identifier(name: string): boolean {
-  return isValidIdentifier(name, true) && !RESERVED_WORDS_ES3_ONLY.has(name);
+  return isValidIdentifier(name) && !RESERVED_WORDS_ES3_ONLY.has(name);
 }
 
 /**
@@ -192,7 +213,7 @@ export function isValidES3Identifier(name: string): boolean {
 
 export function isLet(node: Object): boolean {
   return (
-    t.isVariableDeclaration(node) &&
+    isVariableDeclaration(node) &&
     (node.kind !== "var" || node[BLOCK_SCOPED_SYMBOL])
   );
 }
@@ -202,9 +223,7 @@ export function isLet(node: Object): boolean {
  */
 
 export function isBlockScoped(node: Object): boolean {
-  return (
-    t.isFunctionDeclaration(node) || t.isClassDeclaration(node) || t.isLet(node)
-  );
+  return isFunctionDeclaration(node) || isClassDeclaration(node) || isLet(node);
 }
 
 /**
@@ -213,7 +232,7 @@ export function isBlockScoped(node: Object): boolean {
 
 export function isVar(node: Object): boolean {
   return (
-    t.isVariableDeclaration(node, { kind: "var" }) && !node[BLOCK_SCOPED_SYMBOL]
+    isVariableDeclaration(node, { kind: "var" }) && !node[BLOCK_SCOPED_SYMBOL]
   );
 }
 
@@ -223,8 +242,8 @@ export function isVar(node: Object): boolean {
 
 export function isSpecifierDefault(specifier: Object): boolean {
   return (
-    t.isImportDefaultSpecifier(specifier) ||
-    t.isIdentifier(specifier.imported || specifier.exported, {
+    isImportDefaultSpecifier(specifier) ||
+    isIdentifier(specifier.imported || specifier.exported, {
       name: "default",
     })
   );
@@ -235,15 +254,15 @@ export function isSpecifierDefault(specifier: Object): boolean {
  */
 
 export function isScope(node: Object, parent: Object): boolean {
-  if (t.isBlockStatement(node) && t.isFunction(parent, { body: node })) {
+  if (isBlockStatement(node) && isFunction(parent, { body: node })) {
     return false;
   }
 
-  if (t.isBlockStatement(node) && t.isCatchClause(parent, { body: node })) {
+  if (isBlockStatement(node) && isCatchClause(parent, { body: node })) {
     return false;
   }
 
-  return t.isScopable(node);
+  return isScopable(node);
 }
 
 /**
@@ -251,9 +270,9 @@ export function isScope(node: Object, parent: Object): boolean {
  */
 
 export function isImmutable(node: Object): boolean {
-  if (t.isType(node.type, "Immutable")) return true;
+  if (isType(node.type, "Immutable")) return true;
 
-  if (t.isIdentifier(node)) {
+  if (isIdentifier(node)) {
     if (node.name === "undefined") {
       // immutable!
       return true;
@@ -269,8 +288,7 @@ export function isImmutable(node: Object): boolean {
 /**
  * Check if two nodes are equivalent
  */
-
-export function isNodesEquivalent(a, b) {
+export function isNodesEquivalent(a: any, b: any) {
   if (
     typeof a !== "object" ||
     typeof b !== "object" ||
@@ -284,7 +302,7 @@ export function isNodesEquivalent(a, b) {
     return false;
   }
 
-  const fields = Object.keys(t.NODE_FIELDS[a.type] || a.type);
+  const fields = Object.keys(NODE_FIELDS[a.type] || a.type);
 
   for (const field of fields) {
     if (typeof a[field] !== typeof b[field]) {
@@ -313,4 +331,65 @@ export function isNodesEquivalent(a, b) {
   }
 
   return true;
+}
+
+/**
+ * Determines whether or not the input node `member` matches the
+ * input `match`.
+ *
+ * For example, given the match `React.createClass` it would match the
+ * parsed nodes of `React.createClass` and `React["createClass"]`.
+ */
+export function matchesPattern(
+  member: Object,
+  match: string | Array<string>,
+  allowPartial?: boolean,
+): boolean {
+  // not a member expression
+  if (!isMemberExpression(member)) return false;
+
+  const parts = Array.isArray(match) ? match : match.split(".");
+  const nodes = [];
+
+  let node;
+  for (node = member; isMemberExpression(node); node = node.object) {
+    nodes.push(node.property);
+  }
+  nodes.push(node);
+
+  if (nodes.length < parts.length) return false;
+  if (!allowPartial && nodes.length > parts.length) return false;
+
+  for (let i = 0, j = nodes.length - 1; i < parts.length; i++, j--) {
+    const node = nodes[j];
+    let value;
+    if (isIdentifier(node)) {
+      value = node.name;
+    } else if (isStringLiteral(node)) {
+      value = node.value;
+    } else {
+      return false;
+    }
+
+    if (parts[i] !== value) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Build a function that when called will return whether or not the
+ * input `node` `MemberExpression` matches the input `match`.
+ *
+ * For example, given the match `React.createClass` it would match the
+ * parsed nodes of `React.createClass` and `React["createClass"]`.
+ */
+export function buildMatchMemberExpression(
+  match: string,
+  allowPartial?: boolean,
+): Object => boolean {
+  const parts = match.split(".");
+  return function(member) {
+    return matchesPattern(member, parts, allowPartial);
+  };
 }
