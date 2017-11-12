@@ -58,7 +58,7 @@ export default function () {
       // redeclared in this scope
       if (this.scope.getBinding(name) !== path.scope.getBinding(name)) return;
 
-      if (path.parentPath.isCallExpression({ callee: path.node })) {
+      if (path.parentPath.isCallExpression({ callee: path.node }) && t.isMemberExpression(remap)) {
         path.replaceWith(t.sequenceExpression([t.numericLiteral(0), remap]));
       } else if (path.isJSXIdentifier() && t.isMemberExpression(remap)) {
         const { object, property } = remap;
