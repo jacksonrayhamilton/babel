@@ -183,8 +183,8 @@ export default function () {
           this.ranCommonJS = true;
 
           const strict = !!this.opts.strict;
-          const noInterop = !!this.opts.noInterop;
           const importCommonJS = !!this.opts.importCommonJS;
+          const noInterop = importCommonJS || !!this.opts.noInterop;
 
           const { scope } = path;
 
