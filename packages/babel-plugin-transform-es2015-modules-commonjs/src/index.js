@@ -184,6 +184,7 @@ export default function () {
 
           const strict = !!this.opts.strict;
           const noInterop = !!this.opts.noInterop;
+          const importCommonJS = !!this.opts.importCommonJS;
 
           const { scope } = path;
 
@@ -481,8 +482,14 @@ export default function () {
                       topNodes.push(varDecl);
                     }
                   }
-                  remaps[specifier.local.name] = t.memberExpression(target,
-                    t.cloneWithoutLoc(specifier.imported));
+                  if (importCommonJS) {
+                    if (specifier.imported.name === "default") {
+                      remaps[specifier.local.name] = target;
+                    }
+                  } else {
+                    remaps[specifier.local.name] = t.memberExpression(target,
+                      t.cloneWithoutLoc(specifier.imported));
+                  }
                 }
               }
             } else {
