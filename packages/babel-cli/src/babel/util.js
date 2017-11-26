@@ -1,7 +1,6 @@
 const commander = require("commander");
 const defaults  = require("lodash/defaults");
 const readdir   = require("fs-readdir-recursive");
-const index     = require("./index");
 const babel     = require("babel-core");
 const util      = require("babel-core").util;
 const path      = require("path");
@@ -21,8 +20,8 @@ export { readdir };
 
 export const canCompile = util.canCompile;
 
-export function shouldIgnore(loc) {
-  return util.shouldIgnore(loc, index.opts.ignore, index.opts.only);
+export function shouldIgnore(loc, opts) {
+  return util.shouldIgnore(loc, opts.ignore, opts.only);
 }
 
 export function addSourceMappingUrl(code, loc) {
@@ -33,8 +32,8 @@ export function log(msg) {
   if (!commander.quiet) console.log(msg);
 }
 
-export function transform(filename, code, opts) {
-  opts = defaults(opts || {}, index.opts);
+export function transform(filename, code, opts, programOpts) {
+  opts = defaults(opts || {}, programOpts);
   opts.filename = filename;
 
   const result = babel.transform(code, opts);
@@ -43,10 +42,10 @@ export function transform(filename, code, opts) {
   return result;
 }
 
-export function compile(filename, opts) {
+export function compile(filename, opts, programOpts) {
   try {
     const code = fs.readFileSync(filename, "utf8");
-    return transform(filename, code, opts);
+    return transform(filename, code, opts, programOpts);
   } catch (err) {
     if (commander.watch) {
       console.error(toErrorStack(err));

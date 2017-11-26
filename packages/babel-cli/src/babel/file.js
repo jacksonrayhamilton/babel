@@ -97,7 +97,7 @@ module.exports = function (commander, filenames, opts) {
     process.stdin.on("end", function () {
       results.push(util.transform(commander.filename, code, {
         sourceFileName: "stdin",
-      }));
+      }, opts));
       output();
     });
   };
@@ -122,7 +122,7 @@ module.exports = function (commander, filenames, opts) {
     });
 
     _filenames.forEach(function (filename) {
-      if (util.shouldIgnore(filename)) return;
+      if (util.shouldIgnore(filename, opts)) return;
 
       let sourceFilename = filename;
       if (commander.outFile) {
@@ -132,7 +132,7 @@ module.exports = function (commander, filenames, opts) {
 
       const data = util.compile(filename, {
         sourceFileName: sourceFilename,
-      });
+      }, opts);
 
       if (data.ignored) return;
       results.push(data);
@@ -157,7 +157,7 @@ module.exports = function (commander, filenames, opts) {
           pollInterval: 10,
         }
       }).on("all", function (type, filename) {
-        if (util.shouldIgnore(filename) || !util.canCompile(filename, commander.extensions)) return;
+        if (util.shouldIgnore(filename, opts) || !util.canCompile(filename, commander.extensions)) return;
 
         if (type === "add" || type === "change") {
           util.log(type + " " + filename);
